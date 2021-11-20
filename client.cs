@@ -47,7 +47,7 @@ function pickBrickPlayer(%bool, %focalPoint_pass)
 		clientCmdCenterprint("\c0could not find brick", 1);
 		return;
 	}
-
+	
 	initClientBrickSearch(%end, "0.1 0.1 0.1");
 	%brick = clientBrickSearchNext();
 	$lastPickBrick = %brick;
@@ -61,8 +61,10 @@ function pickBrickPlayer(%bool, %focalPoint_pass)
 	if($pickBrickPlayer_pressTime > 0.12)
 	{
 		PaintGui_selectID(%brick.getColorID());
-	} else commandToServer('instantUseBrick', %brick.getDatablock());
+	} else 
+		commandToServer('instantUseBrick', %brick.getDatablock());
 }
+
 
 function PaintGui_selectID(%colorID)
 {
@@ -81,6 +83,7 @@ function PaintGui_selectID(%colorID)
 		}
 		%lastDiv = %div;
 	}
+
 	if(%colorID >= %div)
 		return 0;
 
@@ -101,12 +104,18 @@ function PaintGui_selectID(%colorID)
 	$currSprayCanIndex = %colorID;
 	commandToServer('useSprayCan', %colorID);
 
+	if ($RecordingBuildMacro && isObject ($BuildMacroSO))
+		$BuildMacroSO.pushEvent ("Server", 'useSprayCan', %canIndex);
+
 	if(!$pref::Hud::RecolorBrickIcons)
 		return;
-	
+
 	%color = getColorIDTable($currSprayCanIndex);
 	%color = getWords(%color, 0, 2) SPC mClampF(getWord(%color, 3), 0.1, 1);
 	for(%I = 0; %i < $BSD_NumInventorySlots; %I++)
 		if(isObject($HUD_BrickIcon[%i]))
 			$HUD_BrickIcon[%i].setColor(%color);
-}
+
+	//would support TMBI color stuff but its annoying
+} 
+
