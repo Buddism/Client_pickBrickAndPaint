@@ -1,6 +1,32 @@
-function retrieveFocalPoint(%eval_callback)
+exec("./Support_Keybinds.cs");
+
+//registerKeyBind("Slayer", "Options", "SlayerClient_pushOptions");
+
+
+registerKeyBind("Brick Picker", "Pick Brick", "Picker_PickBrick");
+registerKeyBind("Brick Picker", "Pick Color", "Picker_PickColor");
+registerKeyBind("Brick Picker", "Pick Print", "Picker_PickPrint");
+
+registerKeyBind("Brick Picker", "Pick Brick or Paint or Print", "Picker_PickBrickPaint");
+
+if($Pref::PickBrick::TimeForPaint $= "")
+	$Pref::PickBrick::TimeForPaint = 0.12; //in seconds (default value: 0.12)
+
+if($Pref::PickBrick::TimeForPrint $= "")
+	$Pref::PickBrick::TimeForPrint = 0.4; //in seconds (default value: 0.3)
+
+//first argument will always be %focalPoint
+function retrieveFocalPoint(%callback, %arg0, %arg1)
 {
-	$retrieveFocalPoint_callback[$retrieveFocalQueueCount + 0] = %eval_callback;
+	if(!isFunction(%callback))
+		return;
+		
+	%count = $retrieveFocalQueueCount + 0;
+
+	$retrieveFocalPoint_callback[%count] = %callback;
+	$retrieveFocalPoint_callbackArgs[%count, 0] = %arg0;
+	$retrieveFocalPoint_callbackArgs[%count, 1] = %arg1;
+
 	$retrieveFocalQueueCount++;
 	commandToServer('setFocalPoint');
 }
@@ -14,40 +40,29 @@ package retrieveFocalPoint
 		if($retrieveFocalQueueCount > 0)
 		{
 			$retrieveFocalQueueCount--;
-			eval($retrieveFocalPoint_callback[$retrieveFocalQueueCount]);
+			%count = $retrieveFocalQueueCount;
+			%callback = $retrieveFocalPoint_callback[%count];
+			if(isFunction(%callback))
+				call(%callback, vectorScale(%point, 1), $retrieveFocalPoint_callbackArgs[%count, 0], $retrieveFocalPoint_callbackArgs[%count, 1]); //make sure its a vector3f
 
 			deleteVariables("$retrieveFocalPoint_callback" @ $retrieveFocalQueueCount);
+			deleteVariables("$retrieveFocalPoint_callbackArgs" @ $retrieveFocalQueueCount @"_0");
+			deleteVariables("$retrieveFocalPoint_callbackArgs" @ $retrieveFocalQueueCount @"_1");
 		}
 		return %ret;
 	}
 };
 activatePackage(retrieveFocalPoint);
 
-function pickBrickPlayer(%bool, %focalPoint_pass)
+function Picker_HandleCallbacks(%point, %callback)
 {
-	if(%bool)
-	{
-		$pickBrickPlayer_activateTime = $Sim::Time;
-		return;
-	} else {
-		if(!%focalPoint_pass)
-			$pickBrickPlayer_pressTime = $Sim::Time - $pickBrickPlayer_activateTime;
-	}
-
-	if(!%focalPoint_pass)
-		return retrieveFocalPoint("pickBrickPlayer(0, 1);");
-
-	if(!isObject(%client = serverConnection) || !isObject(%player = %client.getControlObject()))
-		return;
-
 	%end = $focalpoint;
-
 	if(%end $= "")
 	{
 		clientCmdCenterprint("\c0could not find brick", 1);
 		return;
 	}
-	
+
 	initClientBrickSearch(%end, "0.1 0.1 0.1");
 	%brick = clientBrickSearchNext();
 	$lastPickBrick = %brick;
@@ -58,11 +73,64 @@ function pickBrickPlayer(%bool, %focalPoint_pass)
 		return;
 	}
 
-	if($pickBrickPlayer_pressTime > 0.12)
+	call(%callback, %brick, %point);
+}
+
+function Picker_PickBrick(%value)
+{
+	if(!%value)
+		return;
+
+	retrieveFocalPoint("Picker_HandleCallbacks", "Picker_PickBrick_Callback");
+}
+
+function Picker_PickColor(%value)
+{
+	if(!%value)
+		return;
+
+	retrieveFocalPoint("Picker_HandleCallbacks", "Picker_PickColor_Callback");
+}
+
+function Picker_PickPrint(%value)
+{
+	if(!%value)
+		return;
+
+	retrieveFocalPoint("Picker_HandleCallbacks", "Picker_PickPrint_Callback");
+}
+
+function Picker_PickBrickPaint(%value)
+{
+	if(%value)
 	{
-		PaintGui_selectID(%brick.getColorID());
-	} else 
-		commandToServer('instantUseBrick', %brick.getDatablock());
+		$Picker_PaintBrickHoldTime = $Sim::Time;
+		return;
+	}
+
+	%time = $Sim::Time - $Picker_PaintBrickHoldTime;
+
+	if(%time > $Pref::PickBrick::TimeForPrint)
+		Picker_PickPrint(1);
+	if(%time > $Pref::PickBrick::TimeForPaint)
+		Picker_PickColor(1);
+	else 
+		Picker_PickBrick(1);
+}
+
+function Picker_PickBrick_Callback(%brick, %point)
+{
+	BSD_RightClickIcon(%brick.getDatablock());
+}
+
+function Picker_PickColor_Callback(%brick, %point)
+{
+	PaintGui_selectID(%brick.getColorID());
+}
+
+function Picker_PickPrint_Callback(%brick, %point)
+{
+	PSD_Click(%brick.getPrintID());
 }
 
 
