@@ -36,18 +36,25 @@ package retrieveFocalPoint
 	function clientCmdSetFocalPoint(%point)
 	{
 		//$focalPoint = %point;
-		%ret =  parent::clientCmdSetFocalPoint(%point);
+		%ret = parent::clientCmdSetFocalPoint(%point);
 		if($retrieveFocalQueueCount > 0)
 		{
-			$retrieveFocalQueueCount--;
-			%count = $retrieveFocalQueueCount;
-			%callback = $retrieveFocalPoint_callback[%count];
+			%callback = $retrieveFocalPoint_callback[0];
 			if(isFunction(%callback))
-				call(%callback, vectorScale(%point, 1), $retrieveFocalPoint_callbackArgs[%count, 0], $retrieveFocalPoint_callbackArgs[%count, 1]); //make sure its a vector3f
+				call(%callback, vectorScale(%point, 1), $retrieveFocalPoint_callbackArgs[0, 0], $retrieveFocalPoint_callbackArgs[0, 1]); //make sure its a vector3f
 
-			deleteVariables("$retrieveFocalPoint_callback" @ $retrieveFocalQueueCount);
-			deleteVariables("$retrieveFocalPoint_callbackArgs" @ $retrieveFocalQueueCount @"_0");
-			deleteVariables("$retrieveFocalPoint_callbackArgs" @ $retrieveFocalQueueCount @"_1");
+			%count = $retrieveFocalQueueCount;
+			for(%i = 0; %i < %count - 1; %i++)
+			{
+				$retrieveFocalPoint_callback[%i]        = $retrieveFocalPoint_callback[%i + 1];
+				$retrieveFocalPoint_callbackArgs[%i, 0] = $retrieveFocalPoint_callbackArgs[%i + 1, 0];
+				$retrieveFocalPoint_callbackArgs[%i, 1] = $retrieveFocalPoint_callbackArgs[%i + 1, 1];
+			}
+
+			$retrieveFocalPoint_callback[%count - 1]        = "";
+			$retrieveFocalPoint_callbackArgs[%count - 1, 0] = "";
+			$retrieveFocalPoint_callbackArgs[%count - 1, 1] = "";
+			$retrieveFocalQueueCount--;
 		}
 		return %ret;
 	}
