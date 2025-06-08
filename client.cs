@@ -13,7 +13,7 @@ if($Pref::PickBrick::TimeForPaint $= "")
 	$Pref::PickBrick::TimeForPaint = 0.12; //in seconds (default value: 0.12)
 
 if($Pref::PickBrick::TimeForPrint $= "")
-	$Pref::PickBrick::TimeForPrint = 0.4; //in seconds (default value: 0.3)
+	$Pref::PickBrick::TimeForPrint = 0.4; //in seconds (default value: 0.4)
 
 //first argument will always be %focalPoint
 function retrieveFocalPoint(%callback, %arg0, %arg1)
